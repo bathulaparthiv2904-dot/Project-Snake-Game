@@ -28,8 +28,14 @@ const TRACKS = [
 export default function MusicPlayer() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
+
+  // Reset ready state when changing tracks to prevent race conditions during URL swapping
+  useEffect(() => {
+    setIsReady(false);
+  }, [currentTrackIndex]);
 
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
@@ -129,18 +135,14 @@ export default function MusicPlayer() {
       
       <ReactPlayer
         url={track.url}
-        playing={isPlaying}
+        playing={isPlaying && isReady}
+        onReady={() => setIsReady(true)}
         volume={volume}
         muted={isMuted}
         onEnded={handleEnded}
         width="0"
         height="0"
         style={{ display: 'none' }}
-        config={{
-          youtube: {
-            playerVars: { autoplay: 1 }
-          }
-        }}
       />
     </div>
   );
