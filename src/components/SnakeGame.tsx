@@ -21,6 +21,44 @@ const generateFood = (snake: Point[]): Point => {
   return newFood!;
 };
 
+// Retro beep effect using Web Audio API
+let audioCtx: AudioContext | null = null;
+
+const playBeep = () => {
+  try {
+    if (!audioCtx) {
+      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextCtor) return;
+      audioCtx = new AudioContextCtor();
+    }
+    
+    // Ensure context is running (browsers suspend it if not triggered by native user interaction)
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    // Synth-like sweeping square wave
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+    
+    // Volume envelope (louder and punchier)
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.1);
+  } catch (e) {
+    console.warn("Audio beep failed:", e);
+  }
+};
+
 export default function SnakeGame() {
   const [snake, setSnake] = useState<Point[]>(INITIAL_SNAKE);
   const [direction, setDirection] = useState<Point>(INITIAL_DIRECTION);
@@ -69,6 +107,7 @@ export default function SnakeGame() {
 
       // Check food collision
       if (newHead.x === food.x && newHead.y === food.y) {
+        playBeep();
         setScore(s => s + 10);
         setFood(generateFood(newSnake));
       } else {
@@ -81,6 +120,16 @@ export default function SnakeGame() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Proactively initialize/resume audio context on user gesture to bypass browser autoplay restrictions
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      } else if (!audioCtx) {
+        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextCtor) {
+          audioCtx = new AudioContextCtor();
+        }
+      }
+
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
         e.preventDefault();
         

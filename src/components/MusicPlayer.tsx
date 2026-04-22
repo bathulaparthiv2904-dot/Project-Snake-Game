@@ -1,38 +1,35 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, Music } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, Volume1, VolumeX, Music } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import ReactPlayer from 'react-player';
 
 const TRACKS = [
   {
-    title: "Neon Dreams (AI Gen)",
-    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+    title: "Good Morning World! (Dr. Stone)",
+    url: "https://www.youtube.com/watch?v=pmanD_s7G3U",
+    artist: "Burnout Syndromes"
   },
   {
-    title: "Cybernetic Heartbeat (AI Gen)",
-    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+    title: "Neon Dreams",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
+    artist: "AI Generator"
   },
   {
-    title: "Synthetic Soul (AI Gen)",
-    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+    title: "Cybernetic Heartbeat",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3",
+    artist: "AI Generator"
+  },
+  {
+    title: "Synthetic Soul",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3",
+    artist: "AI Generator"
   }
 ];
 
 export default function MusicPlayer() {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch((err) => {
-          console.error("Audio playback failed:", err);
-          setIsPlaying(false);
-        });
-      } else {
-        audioRef.current.pause();
-      }
-    }
-  }, [isPlaying, currentTrackIndex]);
+  const [volume, setVolume] = useState(0.8);
+  const [isMuted, setIsMuted] = useState(false);
 
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
@@ -52,6 +49,25 @@ export default function MusicPlayer() {
     nextTrack();
   };
 
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (isMuted && newVolume > 0) {
+      setIsMuted(false);
+    }
+    if (newVolume === 0) {
+      setIsMuted(true);
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    // If they unmute but volume is 0, bump it up a bit so they can hear something
+    if (isMuted && volume === 0) {
+      setVolume(0.5);
+    }
+  };
+
   const track = TRACKS[currentTrackIndex];
 
   return (
@@ -62,11 +78,11 @@ export default function MusicPlayer() {
           <div className="absolute inset-0 bg-white/5 backdrop-blur-sm shadow-[inset_0_0_20px_rgba(255,255,255,0.1)] rounded-3xl pointer-events-none" />
         </div>
         <div className="w-full">
-          <h3 className="text-base font-bold text-white/90 truncate drop-shadow-md">
-            {track.title.replace(" (AI Gen)", "")}
+          <h3 className="text-base font-bold text-white/90 truncate drop-shadow-md" title={track.title}>
+            {track.title}
           </h3>
-          <p className="text-[9px] text-emerald-400 font-mono tracking-widest mt-1.5 uppercase">
-            AI TRACK • {currentTrackIndex + 1}/{TRACKS.length}
+          <p className="text-[9px] text-emerald-400 font-mono tracking-widest mt-1.5 uppercase truncate" title={track.artist}>
+            {track.artist} • {currentTrackIndex + 1}/{TRACKS.length}
           </p>
         </div>
       </div>
@@ -91,8 +107,41 @@ export default function MusicPlayer() {
           <SkipForward className="w-5 h-5" />
         </button>
       </div>
+
+      <div className="flex items-center gap-3 w-full px-2 mt-1 opacity-80 group">
+        <button 
+          onClick={toggleMute} 
+          className={`flex items-center justify-center w-8 h-8 rounded-full transition-colors ${isMuted ? 'bg-pink-500/20 text-pink-400' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
+          title={isMuted ? "Unmute" : "Mute"}
+        >
+          {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : volume < 0.5 ? <Volume1 className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </button>
+        <input 
+          type="range" 
+          min="0" 
+          max="1" 
+          step="0.01" 
+          value={isMuted ? 0 : volume}
+          onChange={handleVolumeChange}
+          className={`flex-1 h-1 rounded-full appearance-none cursor-pointer outline-none transition-all ${isMuted ? 'bg-pink-500/20 accent-pink-500 hover:accent-pink-400' : 'bg-white/10 accent-emerald-400 hover:accent-emerald-300'}`} 
+        />
+      </div>
       
-      <audio ref={audioRef} src={track.url} onEnded={handleEnded} />
+      <ReactPlayer
+        url={track.url}
+        playing={isPlaying}
+        volume={volume}
+        muted={isMuted}
+        onEnded={handleEnded}
+        width="0"
+        height="0"
+        style={{ display: 'none' }}
+        config={{
+          youtube: {
+            playerVars: { autoplay: 1 }
+          }
+        }}
+      />
     </div>
   );
 }
